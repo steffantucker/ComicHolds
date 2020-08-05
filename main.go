@@ -1,43 +1,44 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	"github.com/steffantucker/holdsapi/postgres"
+	"github.com/steffantucker/holdsAPI/comics"
+	"github.com/steffantucker/holdsAPI/series"
 )
 
-func initializeAPI() (*chi.Mux, *postgres.Db) {
+func initializeAPI() (*chi.Mux, *sql.DB) {
 	router := chi.NewRouter()
 
-	db, err := postgres.New(
-		postgres.ConnString("localhost", 5432, "comicholds", "password", "comicholds"),
-	)
+	db, err := initializeDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 
 	// middleware for router
 	router.Use(
 		middleware.RequestID,
 		middleware.Logger,
 		middleware.Recoverer,
-		middleware.URLFormat,
 		render.SetContentType(render.ContentTypeJSON),
 	)
 
 	// Comic book routes
-	router.Route("/comics", func(r chi.Router) {
-		r.Get("/", comics.GetAllComics)
-		r.Post("/", comics.NewComic)
-		r.Get("/{id}", comics.GetComic)
+	comicHandler := comics.NewHandler(db)
+	seriesHandler := series.NewHandler(db)
+	router.Route("/", func(r chi.Router) {
+		r.Mount("/comics", comicHandler.ComicRouter())
+		r.Mount("/series", seriesHandler.SeriesRouter())
 	})
+
 	router.Route("/series", func(r chi.Router) {
-		r.With(paginate).Get("/", series.GetAllSeries)
+		r.Get("/", series.GetAllSeries)
 		r.Post("/", series.NewSeries)
 		r.Get("/{id}", series.GetSeries)
 	})
@@ -45,9 +46,19 @@ func initializeAPI() (*chi.Mux, *postgres.Db) {
 	return router, db
 }
 
+func initializeDB() (*sql.DB, error) {
+	// TODO: move login info to env variables
+	host := "localhost"
+	port := 5432
+	user := "comicholds"
+	pass := "password"
+	dbname := "comicholds"
+	connstring := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, pass, dbname)
+	return sql.Open("postgres", connstring)
+}
+
 func main() {
 	router, db := initializeAPI()
 	defer db.Close()
-
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
