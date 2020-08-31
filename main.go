@@ -1,64 +1,71 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
-	"github.com/steffantucker/holdsAPI/comics"
-	"github.com/steffantucker/holdsAPI/series"
+	"github.com/gorilla/mux"
+	"github.com/steffantucker/holdsAPI/handlers/comics"
 )
 
-func initializeAPI() (*chi.Mux, *sql.DB) {
-	router := chi.NewRouter()
+func main() {
+	bindaddress := os.Getenv("BIND_ADDRESS")
+	if bindaddress == "" {
+		bindaddress = ":9090"
+	}
+	l := log.New(os.Stdout, "inventory-api", log.LstdFlags)
+	ch := comics.NewComicsHandler(l)
 
-	db, err := initializeDB()
-	if err != nil {
-		log.Fatal(err)
+	sm := mux.NewRouter()
+
+	getComicsRouter := sm.Methods(http.MethodGet).Subrouter()
+	getComicsRouter.HandleFunc("/comics", ch.GetAllComics)
+
+	postComicsRouter := sm.Methods(http.MethodPost).Subrouter()
+	postComicsRouter.HandleFunc("/comics", ch.NewComic)
+	postComicsRouter.Use(ch.MiddlewareVerifyComicData)
+
+	putComicsRouter := sm.Methods(http.MethodPut).Subrouter()
+	putComicsRouter.HandleFunc("/comics/{id:[0-9]+}", ch.UpdateComic)
+	putComicsRouter.Use(ch.MiddlewareVerifyComicData)
+
+	// create a new server
+	s := http.Server{
+		Addr:         bindaddress,       // configure the bind address
+		Handler:      sm,                // set the default handler
+		ErrorLog:     l,                 // set the logger for the server
+		ReadTimeout:  5 * time.Second,   // max time to read request from the client
+		WriteTimeout: 10 * time.Second,  // max time to write response to the client
+		IdleTimeout:  120 * time.Second, // max time for connections using TCP Keep-Alive
 	}
 
-	// middleware for router
-	router.Use(
-		middleware.RequestID,
-		middleware.Logger,
-		middleware.Recoverer,
-		render.SetContentType(render.ContentTypeJSON),
-	)
+	// start the server
+	go func() {
+		l.Println("Starting server on port 9090")
 
-	// Comic book routes
-	comicHandler := comics.NewHandler(db)
-	seriesHandler := series.NewHandler(db)
-	router.Route("/", func(r chi.Router) {
-		r.Mount("/comics", comicHandler.ComicRouter())
-		r.Mount("/series", seriesHandler.SeriesRouter())
-	})
+		err := s.ListenAndServe()
+		if err != nil {
+			l.Printf("Error starting server: %s\n", err)
+			os.Exit(1)
+		}
+	}()
 
-	router.Route("/series", func(r chi.Router) {
-		r.Get("/", series.GetAllSeries)
-		r.Post("/", series.NewSeries)
-		r.Get("/{id}", series.GetSeries)
-	})
+	// trap sigterm or interupt and gracefully shutdown the server
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Kill)
 
-	return router, db
-}
+	// Block until a signal is received.
+	sig := <-c
+	log.Println("Got signal:", sig)
 
-func initializeDB() (*sql.DB, error) {
-	// TODO: move login info to env variables
-	host := "localhost"
-	port := 5432
-	user := "comicholds"
-	pass := "password"
-	dbname := "comicholds"
-	connstring := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, pass, dbname)
-	return sql.Open("postgres", connstring)
-}
+	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	log.Println("Shutting down")
+	s.Shutdown(ctx)
 
-func main() {
-	router, db := initializeAPI()
-	defer db.Close()
-	log.Fatal(http.ListenAndServe(":8080", router))
 }
