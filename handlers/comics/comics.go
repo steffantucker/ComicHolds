@@ -49,7 +49,7 @@ func (ch *ComicHandler) UpdateComic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ch.l.Println("Handle PUT comics", id)
-	data := r.Context().Value(KeyComic{}).(data.Comic)
+	/*data := r.Context().Value(KeyComic{}).(data.Comic)
 
 	err = data.UpdateProduct(id, &data)
 	if err == data.ComicNotFound {
@@ -58,7 +58,7 @@ func (ch *ComicHandler) UpdateComic(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		http.Error(w, "Comic not found", http.StatusInternalServerError)
-	}
+	}*/
 }
 
 // GetComic will return 1 comic based on ID
