@@ -4,9 +4,9 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
+	uuid "github.com/satori/go.uuid"
 	"github.com/steffantucker/holdsAPI/data"
 )
 
@@ -37,28 +37,32 @@ func (ch *ComicHandler) GetAllComics(w http.ResponseWriter, r *http.Request) {
 func (ch *ComicHandler) NewComic(w http.ResponseWriter, r *http.Request) {
 	ch.l.Println("Handle POST comics")
 	comic := r.Context().Value(KeyComic{}).(data.Comic)
-	data.AddComic(&comic)
+	err := data.AddComic(&comic)
+	if err != nil {
+		http.Error(w, "Can't add comic", http.StatusConflict)
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // UpdateComic updates the data associated with a comic
 func (ch *ComicHandler) UpdateComic(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	id, err := uuid.FromString(vars["id"])
 	if err != nil {
 		http.Error(w, "Unable to convert ID", http.StatusBadRequest)
 	}
 
 	ch.l.Println("Handle PUT comics", id)
-	/*data := r.Context().Value(KeyComic{}).(data.Comic)
+	dat := r.Context().Value(KeyComic{}).(data.Comic)
 
-	err = data.UpdateProduct(id, &data)
+	err = data.UpdateComic(id, dat)
 	if err == data.ComicNotFound {
 		http.Error(w, "Comic not found", http.StatusNotFound)
 		return
 	}
 	if err != nil {
-		http.Error(w, "Comic not found", http.StatusInternalServerError)
-	}*/
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+	}
 }
 
 // GetComic will return 1 comic based on ID
