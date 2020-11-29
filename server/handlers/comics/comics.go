@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
-	"github.com/steffantucker/holdsAPI/data"
+	"github.com/steffantucker/ComicHolds/data"
 )
 
 // ComicHandler type
@@ -56,7 +56,7 @@ func (ch *ComicHandler) UpdateComic(w http.ResponseWriter, r *http.Request) {
 	dat := r.Context().Value(KeyComic{}).(data.Comic)
 
 	err = data.UpdateComic(id, dat)
-	if err == data.ComicNotFound {
+	if err == data.ErrComicNotFound {
 		http.Error(w, "Comic not found", http.StatusNotFound)
 		return
 	}

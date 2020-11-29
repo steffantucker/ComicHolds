@@ -2,19 +2,16 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type server struct {
-	db     *sqlx.DB
+	//db     *sqlx.DB
 	server *http.Server
 	logger *log.Logger
 	router *mux.Router
@@ -40,21 +37,21 @@ func newserver() (server, error) {
 	}
 
 	// TODO: env variable for db name
-	var err error
-	s.db, err = sqlx.Open("sqlite3", "comics.db")
-	if err != nil {
-		s.logger.Println("cannot connect to database", err)
-		return server{}, err
-	}
-	row := s.db.QueryRow("SELECT name FROM sqlite_master WHERE type='table'")
-	var tablename string
-	err = row.Scan(&tablename)
-	if err == sql.ErrNoRows {
-		s.createTables()
-	} else if err != nil {
-		s.logger.Println("database exist but ran into an error", err)
-		return server{}, err
-	}
+	// var err error
+	// s.db, err = sqlx.Open("sqlite3", "comics.db")
+	// if err != nil {
+	// 	s.logger.Println("cannot connect to database", err)
+	// 	return server{}, err
+	// }
+	// row := s.db.QueryRow("SELECT name FROM sqlite_master WHERE type='table'")
+	// var tablename string
+	// err = row.Scan(&tablename)
+	// if err == sql.ErrNoRows {
+	// 	s.createTables()
+	// } else if err != nil {
+	// 	s.logger.Println("database exist but ran into an error", err)
+	// 	return server{}, err
+	// }
 	return s, nil
 }
 

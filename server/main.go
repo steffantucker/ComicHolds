@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/steffantucker/holdsAPI/handlers/comics"
+	"github.com/steffantucker/ComicHolds/handlers/comics"
 )
 
 func main() {
