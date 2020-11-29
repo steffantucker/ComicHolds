@@ -12,14 +12,15 @@ import (
 type Comic struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
+	Description string    `json:"description"`
 	Issue       int       `json:"issue"`
 	TotalIssues int       `json:"total_issues"`
 	SeriesID    int       `json:"series_id"`
 	PublisherID int       `json:"publisher_id"`
 }
 
-// ComicNotFound is the error if the requested comic isn't found
-var ComicNotFound = fmt.Errorf("Comic not found")
+// ErrComicNotFound is the error if the requested comic isn't found
+var ErrComicNotFound = fmt.Errorf("Comic not found")
 
 // Comics slice of multiple comics
 type Comics []*Comic
@@ -53,7 +54,7 @@ func AddComic(newComic *Comic) error {
 func UpdateComic(uid uuid.UUID, newData Comic) error {
 	id := getIndexfromProductID(uid)
 	if id == -1 {
-		return ComicNotFound
+		return ErrComicNotFound
 	}
 	comicsList[id] = &newData
 	return nil
