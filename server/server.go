@@ -19,7 +19,7 @@ type server struct {
 
 func newserver() (server, error) {
 	var s server
-	s.logger = log.New(os.Stdout, "inventory-api", log.LstdFlags)
+	s.logger = log.New(os.Stdout, "comicholds-api ", log.LstdFlags)
 	s.router = mux.NewRouter()
 
 	bindaddress := os.Getenv("BIND_ADDRESS")
